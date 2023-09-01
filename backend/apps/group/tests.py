@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -32,24 +33,25 @@ class TestGroups(APITestCase):
 
     def test_list(self):
         self.client.force_login(self.u1)
+        url = reverse('group_api:group-list')
         # test an empty list
-        res = self.client.get("/api/group/group/", {"type": "t1"})
+        res = self.client.get(url, {"type": "t1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 0)
         # test with a group
         g = Group.objects.create(name="G1", group_type=self.t1)
-        res = self.client.get("/api/group/group/", {"type": "t1"})
+        res = self.client.get(url, {"type": "t1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 1)
         # test with a private group
         g.private = True
         g.save()
-        res = self.client.get("/api/group/group/", {"type": "t1"})
+        res = self.client.get(url, {"type": "t1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 0)
         # test with a private group where the user is member
         g.members.add(self.u1.student)
-        res = self.client.get("/api/group/group/", {"type": "t1"})
+        res = self.client.get(url, {"type": "t1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 1)
 
@@ -68,44 +70,46 @@ class TestGroups(APITestCase):
     def test_retrieve(self):
         self.client.force_login(self.u1)
         g = Group.objects.create(name="G1", group_type=self.t1)
+        url = reverse('group_api:group-detail', args=[g.slug])
         # test to retrieve a normal group
-        res = self.client.get(f"/api/group/group/{g.slug}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         # test with private=True
         g.private = True
         g.save()
-        res = self.client.get(f"/api/group/group/{g.slug}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         g.members.add(self.u1.student)
-        res = self.client.get(f"/api/group/group/{g.slug}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         g.private = False
         g.save()
         # test with public=True
         self.client.logout()
-        res = self.client.get(f"/api/group/group/{g.slug}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         g.public = True
         g.save()
-        res = self.client.get(f"/api/group/group/{g.slug}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
     def test_update(self):
         g = Group.objects.create(name="G1", slug="g1", group_type=self.t1)
+        url = reverse('group_api:group-detail', args=[g.slug])
         # test for non-authenticated users
-        res = self.client.put(f"/api/group/group/{g.slug}/", {"name": "G2"})
+        res = self.client.put(url, {"name": "G2"})
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with authenticated user
         self.client.force_login(self.u1)
-        res = self.client.put(f"/api/group/group/{g.slug}/", {"name": "G2"})
+        res = self.client.put(url, {"name": "G2"})
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with member
         g.members.add(self.u1.student)
-        res = self.client.put(f"/api/group/group/{g.slug}/", {"name": "G2"})
+        res = self.client.put(url, {"name": "G2"})
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with admin
         g.membership_set.filter(student=self.u1.student).update(admin=True)
-        res = self.client.put(f"/api/group/group/{g.slug}/", {"name": "G2"})
+        res = self.client.put(url, {"name": "G2"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         # check the modification is done
         self.assertEqual(Group.objects.get(slug="g1").name, "G2")
@@ -154,49 +158,51 @@ class TestMemberships(APITestCase):
 
     def test_list(self):
         self.client.force_login(self.u1)
+        url = reverse('group_api:membership-list')
         # test an empty list
-        res = self.client.get("/api/group/membership/", {"group": "g1"})
+        res = self.client.get(url, {"group": "g1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 0)
         # test with one membership
         self.g1.members.add(self.u2.student)
-        res = self.client.get("/api/group/membership/", {"group": "g1"})
+        res = self.client.get(url, {"group": "g1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 1)
         # test with a private group
         self.g1.private = True
         self.g1.save()
-        res = self.client.get("/api/group/membership/", {"group": "g1"})
+        res = self.client.get(url, {"group": "g1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 0)
         # test with a private group where the user is member
         self.g1.members.add(self.u1.student)
-        res = self.client.get("/api/group/membership/", {"group": "g1"})
+        res = self.client.get(url, {"group": "g1"})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 2)
         self.g1.private = False
         self.g1.save()
         # test on student
-        res = self.client.get("/api/group/membership/", {"student": self.u2.id})
+        res = self.client.get(url, {"student": self.u2.id})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data.get("results")), 1)
         # test if non authenticated
         self.client.logout()
-        res = self.client.get("/api/group/membership/", {"group": "g1"})
+        res = self.client.get(url, {"group": "g1"})
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create(self):
         self.client.force_login(self.u1)
         init_nb = self.g1.members.count()
+        url = reverse('group_api:membership-list')
         # test without dates
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {"group": self.g1.id, "student": self.u1.id},
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         # test with dates
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {
                 "group": self.g1.id,
                 "student": self.u1.id,
@@ -211,21 +217,21 @@ class TestMemberships(APITestCase):
         self.t1.no_membership_dates = True
         self.t1.save()
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {"group": self.g1.id, "student": self.u1.id},
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.g1.members.count(), init_nb + 1)
         # test for creating the a duplicate membership
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {"group": self.g1.id, "student": self.u1.id},
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.g1.members.count(), init_nb + 1)
         # test for adding another member
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {"group": self.g1.id, "student": self.u2.id},
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
@@ -235,7 +241,7 @@ class TestMemberships(APITestCase):
             admin=True
         )
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {"group": self.g1.id, "student": self.u2.id},
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -245,56 +251,59 @@ class TestMemberships(APITestCase):
         self.g1.save()
         self.client.force_login(self.u3)
         res = self.client.post(
-            "/api/group/membership/",
+            url,
             {"group": self.g1.id, "student": self.u3.id},
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_retrieve(self):
         m2 = Membership.objects.create(student=self.u2.student, group=self.g1)
+        url = reverse('group_api:membership-detail', args=[m2.id])
         # test to retrieve
         self.client.force_login(self.u1)
-        res = self.client.get(f"/api/group/membership/{m2.id}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.client.logout()
-        res = self.client.get(f"/api/group/membership/{m2.id}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with private=True
         self.g1.private = True
         self.g1.save()
         self.client.force_login(self.u3)
-        res = self.client.get(f"/api/group/membership/{m2.id}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
         self.g1.private = False
         self.g1.save()
         # test with public=True
         self.client.logout()
-        res = self.client.get(f"/api/group/membership/{m2.id}/")
+        res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_update(self):
         m1 = Membership.objects.create(student=self.u1.student, group=self.g1)
         m2 = Membership.objects.create(student=self.u2.student, group=self.g1)
+        url1 = reverse('group_api:membership-detail', args=[m1.id])
+        url2 = reverse('group_api:membership-detail', args=[m2.id])
         # test for non-authenticated users
         res = self.client.put(
-            f"/api/group/membership/{m1.id}/", {"summary": "Test"}
+            url1, {"summary": "Test"}
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with authenticated user
         self.client.force_login(self.u1)
         res = self.client.put(
-            f"/api/group/membership/{m1.id}/", {"summary": "Test"}
+            url1, {"summary": "Test"}
         )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         # test with other member
         res = self.client.put(
-            f"/api/group/membership/{m2.id}/", {"summary": "Test2"}
+            url2, {"summary": "Test2"}
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with admin
         Membership.objects.filter(id=m1.id).update(admin=True)
         res = self.client.put(
-            f"/api/group/membership/{m2.id}/", {"summary": "Test2"}
+            url2, {"summary": "Test2"}
         )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         # check the modifications are done
@@ -308,20 +317,22 @@ class TestMemberships(APITestCase):
     def test_delete(self):
         m1 = Membership.objects.create(student=self.u1.student, group=self.g1)
         m2 = Membership.objects.create(student=self.u2.student, group=self.g1)
+        url1 = reverse('group_api:membership-detail', args=[m1.id])
+        url2 = reverse('group_api:membership-detail', args=[m2.id])
         # test for non-authenticated users
-        res = self.client.delete(f"/api/group/membership/{m2.id}/")
+        res = self.client.delete(url2)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with authenticated user
         self.client.force_login(self.u1)
-        res = self.client.delete(f"/api/group/membership/{m2.id}/")
+        res = self.client.delete(url2)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # test with admin
         Membership.objects.filter(id=m1.id).update(admin=True)
-        res = self.client.delete(f"/api/group/membership/{m2.id}/")
+        res = self.client.delete(url2)
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         # test for yourself
         Membership.objects.filter(id=m1.id).update(admin=False)
-        res = self.client.delete(f"/api/group/membership/{m1.id}/")
+        res = self.client.delete(url1)
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         # check the modification is done
         self.assertFalse(Membership.objects.filter(id=m1.id).exists())

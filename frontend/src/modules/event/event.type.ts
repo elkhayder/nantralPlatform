@@ -1,4 +1,13 @@
 import { GroupPreview } from '#modules/group/group.type';
+import Language from '#shared/i18n/config';
+
+type LocalizedTitles = {
+  [K in Language as `title_${string & K}`]: string;
+};
+
+type LocalizedDescription = {
+  [K in Language as `description_${string & K}`]: string;
+};
 
 export type Event = {
   id: number;
@@ -19,7 +28,8 @@ export type Event = {
   endRegistration: Date | null;
   formUrl: string;
   notificationId: number | null;
-};
+} & LocalizedTitles &
+  LocalizedDescription;
 
 export type EventPreview = Pick<
   Event,
@@ -51,6 +61,10 @@ export type EventForm = Pick<
   | 'endRegistration'
   | 'formUrl'
 > & {
+  [K in Language as `title_${string & K}`]: string;
+} & {
+  [K in Language as `description_${string & K}`]: string;
+} & {
   startDate: Date | null;
   endDate: Date | null;
   group: number | null;

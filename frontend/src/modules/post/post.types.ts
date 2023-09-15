@@ -1,4 +1,13 @@
 import { GroupPreview } from '#modules/group/group.type';
+import Language from '#shared/i18n/config';
+
+type LocalizedTitles = {
+  [K in Language as `title_${string & K}`]: string;
+};
+
+type LocalizedDescription = {
+  [K in Language as `description_${string & K}`]: string;
+};
 
 export type Post = {
   id: number;
@@ -12,7 +21,8 @@ export type Post = {
   pinned: boolean;
   isAdmin: boolean;
   notificationId: number | null;
-};
+} & LocalizedTitles &
+  LocalizedDescription;
 
 export type PostPreview = Pick<
   Post,
@@ -31,6 +41,10 @@ export type PostForm = Pick<
   Post,
   'title' | 'description' | 'publicity' | 'pinned'
 > & {
+  [K in Language as `title_${string & K}`]: string;
+} & {
+  [K in Language as `description_${string & K}`]: string;
+} & {
   group: number | null;
   image?: File;
 };

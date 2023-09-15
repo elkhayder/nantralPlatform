@@ -151,7 +151,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 AUTH_USER_MODEL = "account.User"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
-MODELTRANSLATION_CUSTOM_FIELDS = ('CKEditor5Field')
+MODELTRANSLATION_CUSTOM_FIELDS = "CKEditor5Field"
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -275,7 +275,10 @@ CKEDITOR_5_CONFIGS = {
                 "openInNewTab": {
                     "mode": "manual",
                     "label": "Ouvrir dans un nouvel onglet",
-                    "attributes": {"target": "_blank", "rel": "noopener noreferrer"},
+                    "attributes": {
+                        "target": "_blank",
+                        "rel": "noopener noreferrer",
+                    },
                 }
             },
         },

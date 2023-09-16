@@ -8,6 +8,11 @@ from django.utils import timezone
 from .manager import UserManager
 
 
+class IdRegistration(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=True)
+    expires_at = models.DateTimeField()
+
+
 class User(AbstractUser):
     USERNAME_FIELD = "email"  # noqa: WPS 115
     EMAIL_FIELD = "email"  # noqa: WPS 115
@@ -16,10 +21,11 @@ class User(AbstractUser):
     objects = UserManager()
 
     email = models.EmailField(unique=True)
-
-
-class IdRegistration(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=True)
+    is_email_valid = models.BooleanField(default=False)
+    email_next = models.EmailField(null=True, blank=True)
+    invitation = models.ForeignKey(
+        IdRegistration, null=True, blank=True, on_delete=models.SET_NULL
+    )
 
 
 class TemporaryAccessRequest(models.Model):
@@ -44,4 +50,4 @@ class TemporaryAccessRequest(models.Model):
             if domain is not None:
                 self.domain = domain
             self.approved_until = settings.TEMPORARY_ACCOUNTS_DATE_LIMIT
-            super(TemporaryAccessRequest, self).save()
+            super().save()

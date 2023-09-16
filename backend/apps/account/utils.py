@@ -9,9 +9,8 @@ from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from apps.account.models import TemporaryAccessRequest
-
 from .forms import SignUpForm, TemporaryRequestSignUpForm
+from .models import IdRegistration
 from .tokens import account_activation_token
 
 User = get_user_model()
@@ -37,13 +36,9 @@ def user_creation(
     last_name = "".join(e for e in user.last_name if e.isalnum())
     promo = user.student.promo
     user.username = f"{first_name}.{last_name}{promo}-{user.id}"
-    # user can't login until link confirmed
-    user.is_active = False
-    user.save()
     if isinstance(form, TemporaryRequestSignUpForm):
-        temporary_access_request = TemporaryAccessRequest(user=user)
-        domain = get_current_site(request).domain
-        temporary_access_request.save(domain=domain)
+        user.invitation = IdRegistration.objects.first()  # TODO
+    user.save()
     send_email_confirmation(
         user, request, isinstance(form, TemporaryRequestSignUpForm)
     )

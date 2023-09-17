@@ -1,11 +1,9 @@
 import re
 
 from django import forms
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from apps.student.models import FACULTIES, PATHS
@@ -15,7 +13,7 @@ from .models import IdRegistration
 User = get_user_model()
 
 
-def check_id(id):
+def check_id(id: int):
     if not IdRegistration.objects.filter(id=id).exists():
         raise ValidationError(
             _(
@@ -37,11 +35,8 @@ def check_ecn_mail(mail: str):
 
 
 def check_ecn_mail_login(mail: str):
-    """A wrapper around the login check to disable during periods where all
-    emails can be used.
-    """
-    if settings.TEMPORARY_ACCOUNTS_DATE_LIMIT >= timezone.now().today():
-        return
+    # A wrapper around the login check to disable during periods where all
+    # emails can be used.
     check_ecn_mail(mail)
 
 
@@ -71,7 +66,7 @@ class SignUpForm(UserCreationForm):
     )
 
     def __init__(self, *args, **kwargs):
-        super(SignUpForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields["email"].label = _("Adresse mail")
         self.fields["confirm_email"].label = _("Confirmation de l'adresse mail")
         self.fields["first_name"].label = _("Prénom")
@@ -86,7 +81,7 @@ class SignUpForm(UserCreationForm):
         self.fields["path"].label = _("Cursus particulier ?")
 
     def clean(self):
-        cleaned_data = super(SignUpForm, self).clean()
+        cleaned_data = super().clean()
         email = cleaned_data.get("email")
         confirm_email = cleaned_data.get("confirm_email")
         try:
@@ -132,7 +127,7 @@ class LoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
-        super(LoginForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields["password"].label = _("Mot de passe")
         self.fields["password"].help_text = (
             f"<a class='text-muted' href='/account/forgotten'>"
@@ -161,12 +156,12 @@ class ResetPassForm(forms.Form):
     password_confirm = forms.CharField(widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
-        super(ResetPassForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields["password"].label = _("Votre nouveau mot de passe")
         self.fields["password_confirm"].label = _("Confirmer le mot de passe")
 
     def clean(self):
-        cleaned_data = super(ResetPassForm, self).clean()
+        cleaned_data = super().clean()
         password = cleaned_data.get("password")
         password_confirm = cleaned_data.get("password_confirm ")
 
@@ -180,6 +175,7 @@ class ResetPassForm(forms.Form):
 
 class TemporaryRequestSignUpForm(SignUpForm):
     """A form to request a temporary access to the platform.
+
     The user will have to confirm the school mail address later.
     """
 

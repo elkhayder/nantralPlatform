@@ -17,11 +17,14 @@ User = get_user_model()
 
 
 def user_creation(
-    form: Union[SignUpForm, TemporaryRequestSignUpForm], request: HttpRequest
+    form: Union[SignUpForm, TemporaryRequestSignUpForm],
+    request: HttpRequest,
+    invitation: Union[IdRegistration, None],
 ) -> User:
     # save with username = email by default
     user: User = form.instance
     user.username = user.email
+    user.set_password(form.cleaned_data.get("password2"))
     user.save()
 
     user.student.promo = form.cleaned_data.get("promo")
@@ -37,7 +40,7 @@ def user_creation(
     promo = user.student.promo
     user.username = f"{first_name}.{last_name}{promo}-{user.id}"
     if isinstance(form, TemporaryRequestSignUpForm):
-        user.invitation = IdRegistration.objects.first()  # TODO
+        user.invitation = invitation
     user.save()
     send_email_confirmation(
         user, request, isinstance(form, TemporaryRequestSignUpForm)

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
@@ -7,7 +6,9 @@ from django.core import mail
 from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
 
-from .models import IdRegistration, TemporaryAccessRequest
+from .models import IdRegistration
+
+User = get_user_model()
 
 
 @admin.register(IdRegistration)
@@ -15,38 +16,9 @@ class IdRegistrationAdmin(admin.ModelAdmin):
     list_display = ["id"]
 
 
-@admin.register(TemporaryAccessRequest)
-class TemporaryAccessRequestAdmin(admin.ModelAdmin):
-    actions = ["send_reminder"]
-    list_display = ["user"]
-
-    @admin.action(description="Send reminder to upgrade account.")
-    def send_reminder(self, request, queryset):
-        connection = mail.get_connection()
-        current_site = get_current_site(request)
-        mails = []
-        for temp_access_request in queryset:
-            temp_access_request: TemporaryAccessRequest
-            email_html = render_to_string(
-                "account/mail/reminder_upgrade.html",
-                context={
-                    "tempAccess": temp_access_request.user,
-                    "deadline": settings.TEMPORARY_ACCOUNTS_DATE_LIMIT,
-                    "domain": current_site.domain,
-                },
-            )
-            email = mail.EmailMultiAlternatives(
-                subject="[Nantral Platform] Votre compte expire bientôt !",
-                body=email_html,
-                to=[temp_access_request.user.email],
-            )
-            email.attach_alternative(content=email_html, mimetype="text/html")
-            mails.append(email)
-        connection.send_messages(mails)
-
-
-@admin.register(get_user_model())
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
+    actions = ["send_reminder"]
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         (
@@ -69,6 +41,13 @@ class CustomUserAdmin(UserAdmin):
         ),
         (_("Dates Importantes"), {"fields": ("last_login", "date_joined")}),
     )
+    list_filter = (
+        "is_staff",
+        "is_superuser",
+        "is_active",
+        "groups",
+        "invitation",
+    )
     add_fieldsets = (
         (
             None,
@@ -78,3 +57,27 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
     )
+    readonly_fields = ("date_joined", "last_login")
+
+    @admin.action(description="Send reminder to upgrade account.")
+    def send_reminder(self, request, queryset):
+        connection = mail.get_connection()
+        current_site = get_current_site(request)
+        mails = []
+        for user in queryset:
+            email_html = render_to_string(
+                "account/mail/reminder_upgrade.html",
+                context={
+                    "tempAccess": user,
+                    "deadline": user.invitation.expires_at,
+                    "domain": current_site.domain,
+                },
+            )
+            email = mail.EmailMultiAlternatives(
+                subject="[Nantral Platform] Votre compte expire bientôt !",
+                body=email_html,
+                to=[user.email],
+            )
+            email.attach_alternative(content=email_html, mimetype="text/html")
+            mails.append(email)
+        connection.send_messages(mails)

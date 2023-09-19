@@ -1,8 +1,9 @@
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
 
 import { Edit as EditIcon } from '@mui/icons-material';
-import { Avatar, Button, useTheme } from '@mui/material';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { Avatar, Button, useTheme, Menu, MenuItem } from '@mui/material';
 
 import {
   UpdatePostApiVariables,
@@ -16,10 +17,12 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
 } from '#shared/components/ResponsiveDialog';
+import { Spacer } from '#shared/components/Spacer/Spacer';
 import { useObjectState } from '#shared/hooks/useObjectState';
-import { global_languages } from '#shared/i18n/config';
+import { languages_without_locales } from '#shared/i18n/config';
 import { useTranslation } from '#shared/i18n/useTranslation';
 import { ApiFormError } from '#shared/infra/errors';
+import { getNativeLanguageName } from '#shared/utils/getNativeLanguageName';
 
 import { PostFormFields } from '../shared/PostFormFields';
 
@@ -34,14 +37,14 @@ export function EditPostModalContent({
   onClose,
   onFinish,
 }: EditPostModalContentProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { palette } = useTheme();
 
   // the values currently in our form
   const formTranslatedValues: PostForm = {};
 
-  for (const lang of global_languages) {
+  for (const lang of languages_without_locales) {
     formTranslatedValues[`title_${lang}`] = post[`title_${lang}`];
     formTranslatedValues[`description_${lang}`] = post[`description_${lang}`];
   }
@@ -81,6 +84,17 @@ export function EditPostModalContent({
     );
   };
 
+  const [selectedLang, setSelectedLang] = useState(i18n.language.substr(0, 2));
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
   return (
     <>
       <ResponsiveDialogHeader
@@ -92,6 +106,37 @@ export function EditPostModalContent({
         }
       >
         {t('post.editModal.title')}
+        <Spacer flex={1} />
+        <Button
+          variant="outlined"
+          disableElevation
+          onClick={handleClick}
+          endIcon={<KeyboardArrowDownIcon />}
+        >
+          {selectedLang}
+        </Button>
+        <Menu
+          id="demo-customized-menu"
+          MenuListProps={{
+            'aria-labelledby': 'demo-customized-button',
+          }}
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleClose}
+        >
+          {languages_without_locales.map((language) => (
+            <MenuItem
+              key={language}
+              value={language}
+              onClick={() => {
+                setSelectedLang(language);
+                handleClose();
+              }}
+            >
+              {getNativeLanguageName(language)}
+            </MenuItem>
+          ))}
+        </Menu>
       </ResponsiveDialogHeader>
       <form onSubmit={(e) => onSubmit(e, formValues)}>
         <ResponsiveDialogContent>
@@ -101,6 +146,7 @@ export function EditPostModalContent({
             formValues={formValues}
             updateFormValues={updateFormValues}
             prevData={post}
+            selectedLang={selectedLang}
           />
         </ResponsiveDialogContent>
         <ResponsiveDialogFooter>

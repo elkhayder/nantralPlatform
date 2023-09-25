@@ -2,12 +2,12 @@ import { FormEvent, useState } from 'react';
 import { useMutation, useQueryClient } from 'react-query';
 
 import { Edit as EditIcon } from '@mui/icons-material';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { Avatar, Button, useTheme, Menu, MenuItem } from '@mui/material';
+import { Avatar, Button, useTheme } from '@mui/material';
 
 import { createEventApi } from '#modules/event/api/createEvent.api';
 import { Event, EventForm } from '#modules/event/event.type';
 import { EventFormDTO } from '#modules/event/infra/event.dto';
+import { LanguageSelector } from '#shared/components/LanguageSelector/LanguageSelector';
 import { LoadingButton } from '#shared/components/LoadingButton/LoadingButton';
 import {
   ResponsiveDialog,
@@ -20,7 +20,6 @@ import { useObjectState } from '#shared/hooks/useObjectState';
 import { languages_without_locales } from '#shared/i18n/config';
 import { useTranslation } from '#shared/i18n/useTranslation';
 import { ApiFormError } from '#shared/infra/errors';
-import { getNativeLanguageName } from '#shared/utils/getNativeLanguageName';
 
 import { EventFormFields } from '../shared/EventFormFields';
 
@@ -87,15 +86,6 @@ export function CreateEventModal({
 
   const [selectedLang, setSelectedLang] = useState(i18n.language.substr(0, 2));
 
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   return (
     <ResponsiveDialog onClose={onClose} disableEnforceFocus>
       <ResponsiveDialogHeader
@@ -108,36 +98,10 @@ export function CreateEventModal({
       >
         {t('event.createModal.title')}
         <Spacer flex={1} />
-        <Button
-          variant="outlined"
-          disableElevation
-          onClick={handleClick}
-          endIcon={<KeyboardArrowDownIcon />}
-        >
-          {selectedLang}
-        </Button>
-        <Menu
-          id="demo-customized-menu"
-          MenuListProps={{
-            'aria-labelledby': 'demo-customized-button',
-          }}
-          anchorEl={anchorEl}
-          open={open}
-          onClose={handleClose}
-        >
-          {languages_without_locales.map((language) => (
-            <MenuItem
-              key={language}
-              value={language}
-              onClick={() => {
-                setSelectedLang(language);
-                handleClose();
-              }}
-            >
-              {getNativeLanguageName(language)}
-            </MenuItem>
-          ))}
-        </Menu>
+        <LanguageSelector
+          selectedLang={selectedLang}
+          setSelectedLang={setSelectedLang}
+        />
       </ResponsiveDialogHeader>
       <form onSubmit={(e) => onSubmit(e, formValues)}>
         <ResponsiveDialogContent>

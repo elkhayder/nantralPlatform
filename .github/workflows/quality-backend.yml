@@ -32,7 +32,7 @@ jobs:
 
       - name: Linter
         run: |
-          pipenv run flakeheaven lint
+          pipenv run lint
 
       - name: Run tests and collect coverage
         run: |
